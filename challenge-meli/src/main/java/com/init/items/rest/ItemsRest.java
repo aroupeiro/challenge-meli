@@ -2,12 +2,12 @@ package com.init.items.rest;
 
 import java.util.ArrayList;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import com.google.gson.Gson;
@@ -27,15 +27,13 @@ public class ItemsRest {
 	 */
 	@RequestMapping(value="/{itemId}",method=RequestMethod.GET)
 	public ResponseEntity<ItemWithoutChildren> item(@PathVariable("itemId") String itemId) {
-	
-		ResponseEntity<String> response = new RestTemplate().getForEntity("https://api.mercadolibre.com/items/".concat(itemId), String.class);
-		
-		if(response.getStatusCode()==HttpStatus.OK) {
+		try {
+			ResponseEntity<String> response = new RestTemplate().getForEntity("https://api.mercadolibre.com/items/".concat(itemId), String.class);		
 			ItemWithoutChildren item = new Gson().fromJson(response.getBody(), ItemWithoutChildren.class);
-	        return ResponseEntity.ok(item);
+		    return ResponseEntity.ok(item);
+		}catch(HttpStatusCodeException exception) {
+			return ResponseEntity.status(exception.getStatusCode()).build();
 		}
-		
-		return ResponseEntity.status(HttpStatus.NO_CONTENT).build();	
 	}
 	
 	/** GET - Item with childrens.
@@ -46,17 +44,18 @@ public class ItemsRest {
 	@RequestMapping(value="/{itemId}/children",method=RequestMethod.GET)
 	public ResponseEntity<ItemWithChildren> itemWithChildrens(@PathVariable("itemId") String itemId) {
 		
-		ResponseEntity<String> responseItem = new RestTemplate().getForEntity("https://api.mercadolibre.com/items/".concat(itemId), String.class);
-		ResponseEntity<String> responseChildrens = new RestTemplate().getForEntity("https://api.mercadolibre.com/items/".concat(itemId).concat("/children"), String.class);
-		
-		ItemWithChildren item = new Gson().fromJson(responseItem.getBody(), ItemWithChildren.class);
-		 
-        ArrayList<Child> childrens = new Gson().fromJson(responseChildrens.getBody(),
-               new TypeToken<ArrayList<Child>>() {}.getType());
-		
-        item.setChildren(childrens);
-        
-		return ResponseEntity.ok(item);
+		try {
+			ResponseEntity<String> responseItem = new RestTemplate().getForEntity("https://api.mercadolibre.com/items/".concat(itemId), String.class);
+			ResponseEntity<String> responseChildrens = new RestTemplate().getForEntity("https://api.mercadolibre.com/items/".concat(itemId).concat("/children"), String.class);
+			
+			ItemWithChildren item = new Gson().fromJson(responseItem.getBody(), ItemWithChildren.class);
+	        ArrayList<Child> childrens = new Gson().fromJson(responseChildrens.getBody(), new TypeToken<ArrayList<Child>>() {}.getType());
+	        item.setChildren(childrens);
+	        
+			return ResponseEntity.ok(item);
+		}catch(HttpStatusCodeException exception) {
+			return ResponseEntity.status(exception.getStatusCode()).build();
+		}
 		
 	}
 
